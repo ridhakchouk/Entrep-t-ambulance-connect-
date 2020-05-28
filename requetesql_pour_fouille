@@ -1,0 +1,840 @@
+/*poir obtenir le % de gyro, porte arriere ouverte, frein à main lors d'un stop*/
+--DROP MATERIALIZED VIEW mview_arret_concat1_V2
+CREATE MATERIALIZED VIEW mview_arret_concat1_V2 AS
+SELECT mview_arret_concat1.*,
+ROUND(100.0 * (SUM(CASE WHEN pos_traitee."WIG_WAG" = 1 THEN 1 ELSE 0 END)::DECIMAL / COUNT(pos_traitee.id_ligne)), 1) AS percent_gyro_on_STOP
+FROM mview_arret_concat1, pos_traitee
+WHERE pos_traitee.id_ligne >= mview_arret_concat1.id_start and pos_traitee.id_ligne <= mview_arret_concat1.id_end
+GROUP BY mview_arret_concat1.id, mview_arret_concat1.id_vehicule, mview_arret_concat1.id_start, mview_arret_concat1.id_end, mview_arret_concat1.ts_start, mview_arret_concat1.ts_end, mview_arret_concat1.point_start, mview_arret_concat1.point_end, mview_arret_concat1.duree, mview_arret_concat1.point_median, mview_arret_concat1.ok_percent;
+
+
+CREATE MATERIALIZED VIEW mview_trajets_stop_concat1_V2 AS
+SELECT mview_trajets_stop_concat1.*, ROUND(100.0 * (SUM(CASE WHEN pos_traitee."WIG_WAG" = 1 THEN 1 ELSE 0 END)::DECIMAL / COUNT(pos_traitee.id_ligne)), 1) AS percent_gyro_on_MOVE
+FROM mview_trajets_stop_concat1, pos_traitee
+where id_ligne >= debut_traj and id_ligne <= fin_traj
+group by mview_trajets_stop_concat1.id_traj, mview_trajets_stop_concat1.id_vehicule, mview_trajets_stop_concat1.arret_debut, mview_trajets_stop_concat1.arret_fin, mview_trajets_stop_concat1.debut_traj, mview_trajets_stop_concat1.fin_traj, mview_trajets_stop_concat1.duree, mview_trajets_stop_concat1."st_makeline"
+
+--DROP TABLE RESULTAT_MOVE
+CREATE TABLE RESULTAT_MOVE (
+	ID_MOVE INTEGER PRIMARY KEY, -- KEY
+	ID_ARRET_PREC INTEGER, -- FOREIGN KEY
+	ID_ARRET_SUIV INTEGER, -- FOREIGN KEY
+	PERCENT_GYRO_ON_MOVE NUMERIC (7,2),
+	SCORE_VERS_HOPITAL NUMERIC (7,2),
+	SCORE_VERS_INTERVENTION NUMERIC (7,2),
+	SCORE_TRAJET_LOGISTIQUE NUMERIC (7,2),
+	SCORE_RETOUR_CASERNE NUMERIC (7,2)
+);
+
+
+--DROP TABLE RESULTAT_STOP
+CREATE TABLE RESULTAT_STOP(
+	ID_STOP INTEGER PRIMARY KEY, -- KEY 
+	ID_MOVE_PREC INTEGER /*REFERENCES RESULTAT_MOVE(ID_MOVE)*/, -- FOREIGN KEY
+	ID_MOVE_SUIV INTEGER /*REFERENCES RESULTAT_MOVE(ID_MOVE)*/, -- FOREIGN KEY
+	ID_POI INTEGER /*REFERENCES POI_TABLE(UNIQUE_ID)*/,	-- FOREIGN KEY
+	DISTANCE_POI_TO_MEDIAN NUMERIC (7,2),
+	PERCENT_GYRO_ON_STOP NUMERIC (7,2),
+	SCORE_ATTENTE_HOPITAL NUMERIC (7,2),
+	SCORE_INTERVENTION NUMERIC (7,2),
+	SCORE_LOGISTIQUE_VEHICULE NUMERIC (7,2),
+	SCORE_ATTENTE_CASERNE NUMERIC (7,2)
+);
+
+
+
+/*DEBUT INSERTION*/
+
+
+-- CHARGEMENT DES DONNEES
+INSERT INTO RESULTAT_STOP (ID_STOP,PERCENT_GYRO_ON_STOP)
+SELECT "id",PERCENT_GYRO_ON_STOP FROM MVIEW_arret_CONCAT1_V2;
+
+INSERT INTO RESULTAT_MOVE (ID_MOVE,PERCENT_GYRO_ON_MOVE)
+SELECT ID_TRAJ,PERCENT_GYRO_ON_MOVE FROM MVIEW_TRAJETS_STOP_CONCAT1_V2;
+
+
+/*CHAINAGE*/
+-- pour avoir les id stop au debut d'un trajectoire et à la fin d'une trajectoire
+--       X--------->X
+update resultat_move
+set id_arret_suiv = arret_fin, id_arret_prec = arret_debut
+from mview_trajets_stop_concat1
+where id_move = id_traj
+
+--INV
+--pour avoir les id_stop avant et apres move
+update resultat_stop
+set id_move_prec = id_move
+from resultat_move
+where id_stop = resultat_move.id_arret_prec;
+
+
+update resultat_stop
+set id_move_suiv = id_move
+from resultat_move
+where id_stop = resultat_move.id_arret_suiv;
+
+
+(---> 4326 ---> 2154)
+ALTER TABLE poi_table
+ ALTER COLUMN geom2154 TYPE geometry(MultiPolygon,2154) 
+  USING ST_Transform(geom2154,2154);
+
+
+-- POUR AVOIR L'ID DU POI PLUS LA DISTANCE PAR RAPPORT A L'ID STOP
+UPDATE RESULTAT_STOP
+SET DISTANCE_POI_TO_MEDIAN = ST_DISTANCE(POI_TABLE.GEOM2154, MVIEW_ARRET_CONCAT1_V2.POINT_MEDIAN), 
+	ID_POI = POI_TABLE.UNIQUE_ID
+FROM 	  POI_TABLE, 
+		  MVIEW_ARRET_CONCAT1_V2
+WHERE
+		  RESULTAT_STOP.ID_STOP = MVIEW_ARRET_CONCAT1_V2.ID
+AND
+(RESULTAT_STOP.ID_STOP,ST_DISTANCE(POI_TABLE.GEOM2154, MVIEW_ARRET_CONCAT1_V2.POINT_MEDIAN)) 
+	IN	(SELECT RESULTAT_STOP.ID_STOP,
+			MIN(ST_DISTANCE(POI_TABLE.GEOM2154, MVIEW_ARRET_CONCAT1_V2.POINT_MEDIAN))
+	FROM RESULTAT_STOP, 
+		  POI_TABLE, 
+		  MVIEW_ARRET_CONCAT1_V2
+	WHERE
+		  RESULTAT_STOP.ID_STOP = MVIEW_ARRET_CONCAT1_V2.ID
+	GROUP BY 
+		  RESULTAT_STOP.ID_STOP );
+
+
+--CBR
+--SCORING ATTENTE CASERNE
+--INIT
+UPDATE RESULTAT_STOP
+SET SCORE_ATTENTE_CASERNE = 0 WHERE SCORE_ATTENTE_CASERNE IS NULL;
+
+	--DANS LE MEILLEUR DES CAS
+UPDATE RESULTAT_STOP
+SET SCORE_ATTENTE_CASERNE = 100 
+FROM POI_TABLE
+WHERE RESULTAT_STOP.ID_POI = POI_TABLE.UNIQUE_ID AND POI_TABLE.ID_CATEGORY = 3 AND DISTANCE_POI_TO_MEDIAN <50.0;
+
+UPDATE RESULTAT_STOP
+SET SCORE_ATTENTE_CASERNE = 50 + 100-(((distance_poi_to_median*100)/100))
+FROM POI_TABLE
+WHERE RESULTAT_STOP.ID_POI = POI_TABLE.UNIQUE_ID AND POI_TABLE.ID_CATEGORY = 3 AND (DISTANCE_POI_TO_MEDIAN >50.0 AND DISTANCE_POI_TO_MEDIAN <=100.0);
+
+
+--SCORE_LOGISTIQUE_CARBURANT
+--INIT
+UPDATE RESULTAT_STOP
+SET SCORE_LOGISTIQUE_VEHICULE = 0 WHERE SCORE_LOGISTIQUE_VEHICULE IS NULL;
+
+	--DANS LE MEILLEUR DES CAS
+UPDATE RESULTAT_STOP
+SET SCORE_LOGISTIQUE_VEHICULE = 100 
+FROM POI_TABLE, RESULTAT_MOVE
+WHERE RESULTAT_STOP.ID_POI = POI_TABLE.UNIQUE_ID AND POI_TABLE.ID_CATEGORY = 2 AND RESULTAT_STOP.DISTANCE_POI_TO_MEDIAN <=10.0
+AND RESULTAT_STOP.PERCENT_GYRO_ON_STOP = 0.00 AND RESULTAT_MOVE.PERCENT_GYRO_ON_MOVE = 0.00 AND RESULTAT_STOP.ID_MOVE_PREC = RESULTAT_MOVE.ID_MOVE;
+
+UPDATE RESULTAT_STOP
+SET SCORE_LOGISTIQUE_VEHICULE = 25 + 
+(25-(RESULTAT_STOP.DISTANCE_POI_TO_MEDIAN*25)/100) + 
+(25-(RESULTAT_STOP.PERCENT_GYRO_ON_STOP*25)/100) + 
+(25-(RESULTAT_MOVE.PERCENT_GYRO_ON_MOVE*25)/100)
+FROM POI_TABLE, RESULTAT_MOVE
+WHERE RESULTAT_STOP.ID_POI = POI_TABLE.UNIQUE_ID AND POI_TABLE.ID_CATEGORY = 2 AND RESULTAT_STOP.DISTANCE_POI_TO_MEDIAN >10.0 AND RESULTAT_STOP.DISTANCE_POI_TO_MEDIAN <=25
+AND RESULTAT_STOP.ID_MOVE_PREC=RESULTAT_MOVE.ID_MOVE;
+
+
+--SCORE ATTENTE HOPITAL
+	--INIT
+UPDATE RESULTAT_STOP
+SET SCORE_ATTENTE_HOPITAL = 0.00
+WHERE SCORE_ATTENTE_HOPITAL IS NULL;
+
+	--DANS LE MEILLEUR DES CAS
+UPDATE RESULTAT_STOP
+SET SCORE_ATTENTE_HOPITAL = 100
+FROM POI_TABLE, RESULTAT_MOVE
+WHERE RESULTAT_STOP.ID_POI = POI_TABLE.UNIQUE_ID AND POI_TABLE.ID_CATEGORY = 1 AND RESULTAT_STOP.DISTANCE_POI_TO_MEDIAN <=50
+AND RESULTAT_STOP.ID_MOVE_PREC=RESULTAT_MOVE.ID_MOVE AND RESULTAT_MOVE.PERCENT_GYRO_ON_MOVE = 100.00;
+
+UPDATE RESULTAT_STOP
+SET SCORE_ATTENTE_HOPITAL = 25 + ((RESULTAT_MOVE.PERCENT_GYRO_ON_MOVE*75)/100)
+FROM POI_TABLE, RESULTAT_MOVE
+WHERE RESULTAT_STOP.ID_POI = POI_TABLE.UNIQUE_ID AND POI_TABLE.ID_CATEGORY = 1 AND (RESULTAT_STOP.DISTANCE_POI_TO_MEDIAN <=50)
+AND RESULTAT_STOP.ID_MOVE_PREC=RESULTAT_MOVE.ID_MOVE;
+
+UPDATE RESULTAT_STOP
+SET SCORE_ATTENTE_HOPITAL = 33.3 + ((RESULTAT_MOVE.PERCENT_GYRO_ON_MOVE*33.3)/100) +(33.3-(RESULTAT_STOP.DISTANCE_POI_TO_MEDIAN*33.3)/100)
+FROM POI_TABLE, RESULTAT_MOVE
+WHERE RESULTAT_STOP.ID_POI = POI_TABLE.UNIQUE_ID AND POI_TABLE.ID_CATEGORY = 1 AND (RESULTAT_STOP.DISTANCE_POI_TO_MEDIAN >50 AND RESULTAT_STOP.DISTANCE_POI_TO_MEDIAN <=100)
+AND RESULTAT_STOP.ID_MOVE_PREC=RESULTAT_MOVE.ID_MOVE;
+
+--SCORE INTERVENTION
+	--INIT
+UPDATE RESULTAT_STOP
+SET SCORE_INTERVENTION = 0.00
+WHERE SCORE_INTERVENTION IS NULL;
+
+UPDATE RESULTAT_STOP
+SET SCORE_INTERVENTION = 25 + (RESULTAT_STOP.PERCENT_GYRO_ON_STOP*75)/100
+WHERE RESULTAT_STOP.DISTANCE_POI_TO_MEDIAN >100;
+
+
+--SCORE VERS HOPITAL
+--INIT
+UPDATE RESULTAT_MOVE
+SET SCORE_VERS_HOPITAL = 0 WHERE SCORE_VERS_HOPITAL IS NULL;
+
+
+--SCORE VERS HOPITAL
+UPDATE RESULTAT_MOVE
+SET SCORE_VERS_HOPITAL = 25 + (((ACTUEL_STOP.SCORE_ATTENTE_HOPITAL*25)/100)+((RESULTAT_MOVE.PERCENT_GYRO_ON_MOVE*25)/100)+((AVANT_STOP.SCORE_INTERVENTION*25)/100))
+FROM RESULTAT_STOP AVANT_STOP, RESULTAT_STOP ACTUEL_STOP, POI_TABLE
+WHERE RESULTAT_MOVE.ID_ARRET_SUIV = ACTUEL_STOP.ID_STOP  AND RESULTAT_MOVE.ID_ARRET_PREC = AVANT_STOP.ID_STOP
+AND ACTUEL_STOP.ID_POI = POI_TABLE.UNIQUE_ID AND POI_TABLE.ID_CATEGORY = 1;
+
+
+--SCORE VERS INTERVENTION
+-- INIT
+UPDATE RESULTAT_MOVE
+SET SCORE_VERS_INTERVENTION = 0.0
+WHERE SCORE_VERS_INTERVENTION IS NULL;
+
+UPDATE RESULTAT_MOVE
+SET SCORE_VERS_INTERVENTION = 33.3 + (((RESULTAT_MOVE.PERCENT_GYRO_ON_MOVE*33.3)/100) + (APRES_MOVE.PERCENT_GYRO_ON_STOP*33.3/100)) 
+FROM RESULTAT_STOP AVANT_MOVE, RESULTAT_STOP APRES_MOVE, POI_TABLE
+WHERE RESULTAT_MOVE.ID_ARRET_SUIV = APRES_MOVE.ID_STOP
+AND RESULTAT_MOVE.ID_ARRET_PREC = AVANT_MOVE.ID_STOP
+AND AVANT_MOVE.ID_POI = POI_TABLE.UNIQUE_ID AND POI_TABLE.ID_CATEGORY = 3;
+
+
+--SCORE TRAJET LOGISTIQUE
+--SCORE VERS INTERVENTION
+-- INIT
+
+UPDATE RESULTAT_MOVE
+SET SCORE_TRAJET_LOGISTIQUE = 0.0
+WHERE SCORE_TRAJET_LOGISTIQUE IS NULL;
+
+UPDATE RESULTAT_MOVE
+SET SCORE_TRAJET_LOGISTIQUE = 33.3 + ((33.3-(ACTUEL_STOP.percent_gyro_on_stop*33.3)/100) +(33.3-(RESULTAT_MOVE.PERCENT_GYRO_ON_MOVE*33.3)/100))
+FROM RESULTAT_STOP ACTUEL_STOP, POI_TABLE
+WHERE RESULTAT_MOVE.ID_ARRET_SUIV = ACTUEL_STOP.ID_STOP
+AND ACTUEL_STOP.ID_POI = POI_TABLE.UNIQUE_ID AND POI_TABLE.ID_CATEGORY = 2;
+
+
+--SCORE RETOUR CASERNE
+--INIT 
+UPDATE RESULTAT_MOVE
+SET SCORE_RETOUR_CASERNE = 0.0
+WHERE SCORE_RETOUR_CASERNE IS NULL;
+
+UPDATE RESULTAT_MOVE
+SET SCORE_RETOUR_CASERNE = 25 + (((ACTUEL_STOP.SCORE_ATTENTE_CASERNE*50)/100) +(25-(RESULTAT_MOVE.PERCENT_GYRO_ON_MOVE*25)/100))
+FROM RESULTAT_STOP ACTUEL_STOP, POI_TABLE
+WHERE RESULTAT_MOVE.ID_ARRET_SUIV = ACTUEL_STOP.ID_STOP
+AND ACTUEL_STOP.ID_POI = POI_TABLE.UNIQUE_ID AND POI_TABLE.ID_CATEGORY = 3;
+
+
+/*
+ALTER TABLE RESULTAT_MOVE ADD CONSTRAINT FK_ID_ARRET_PREC FOREIGN KEY (ID_ARRET_PREC) REFERENCES RESULTAT_STOP (ID_STOP) MATCH FULL;
+ALTER TABLE RESULTAT_MOVE ADD CONSTRAINT FK_ID_ARRET_SUIV FOREIGN KEY (ID_ARRET_SUIV) REFERENCES RESULTAT_STOP (ID_STOP) MATCH FULL;
+*/
+
+-- EXECUTER APRES INSERTION DANS LA TABLE
+--DROP INDEX UNIQUE_IDX_RESULTAT_MOVE_ID_MOVE
+CREATE UNIQUE INDEX UNIQUE_IDX_RESULTAT_MOVE_ID_MOVE
+		ON RESULTAT_MOVE
+		(ID_MOVE,ID_ARRET_PREC,ID_ARRET_SUIV)
+		TABLESPACE PG_DEFAULT;
+
+
+-- EXECUTER APRES INSERTION DANS LA TABLE
+-- DROP INDEX UNIQUE_IDX_RESULTAT_STOP
+CREATE UNIQUE INDEX UNIQUE_IDX_RESULTAT_STOP
+		ON RESULTAT_STOP
+		(ID_STOP,ID_MOVE_PREC,ID_MOVE_SUIV,ID_POI)
+		TABLESPACE PG_DEFAULT;
+		
+
+-- PROC ECHEC GPS		
+CREATE INDEX idx_deb_traj_stop_concat1
+    ON public.mview_trajets_stop_concat1 USING btree
+    ("debut_traj")
+    TABLESPACE pg_default;
+
+CREATE INDEX idx_fin_traj_stop_concat1
+    ON public.mview_trajets_stop_concat1 USING btree
+    ("fin_traj")
+    TABLESPACE pg_default;
+	
+CREATE INDEX idx_traj_stop_concat1
+    ON public.mview_trajets_stop_concat1 USING btree
+    ("id_traj")
+    TABLESPACE pg_default;
+	
+CREATE INDEX idx_longlat_pos_traitee
+    ON public.pos_traitee USING btree
+    ("LONGITUDE","LATITUDE")
+    TABLESPACE pg_default;
+
+create table tmp_table as select * from mview_trajets_stop_concat1;
+alter table tmp_table add column percent_gps_fail NUMERIC (7,2);
+alter table tmp_table add column date_fail timestamp without time zone;
+
+
+--REQUETE LONGUE BESOIN D'ETRE OPTIMISATION
+CREATE MATERIALIZED VIEW mview_trajets_stop_concat1_v3 AS
+	SELECT mview_trajets_stop_concat1.id_traj,
+	ROUND(100.0 * (SUM(CASE WHEN (t0."LONGITUDE" = t1."LONGITUDE" and t0."LATITUDE" = t1."LATITUDE") THEN 1 ELSE 0 END)::DECIMAL / COUNT(t1.id_ligne % 5)), 1) AS percent_gps_fail
+	FROM mview_trajets_stop_concat1, POS_TRAITEE AS t0 , POS_TRAITEE AS t1
+	WHERE t1.id_ligne >= mview_trajets_stop_concat1.debut_traj AND t1.id_ligne <= mview_trajets_stop_concat1.fin_traj and T0.ID_LIGNE = T1.ID_LIGNE+5 
+	group by mview_trajets_stop_concat1.id_traj;
+
+--GET PERCENT GPS FAILED_LOGIN_ATTEMPTS
+UPDATE TMP_TABLE 
+SET PERCENT_GPS_FAIL = mview_trajets_stop_concat1_v3.percent_gps_fail
+FROM mview_trajets_stop_concat1_v3
+WHERE TMP_TABLE.ID_TRAJ = mview_trajets_stop_concat1_v3.ID_TRAJ;
+
+-- GET DATE
+UPDATE tmp_table 
+set date_fail = mview_arret_concat1.ts_start
+from resultat_move, mview_trajets_stop_concat1, mview_arret_concat1
+where tmp_table.id_traj = resultat_move.id_move and resultat_move.id_arret_prec = mview_arret_concat1."id"
+
+
+
+/*RAZ CBR*/
+/*
+update resultat_move
+set score_vers_hopital = 0, score_vers_intervention = 0, score_trajet_logistique = 0, score_retour_caserne = 0
+
+update resultat_move
+set score_vers_hopital = 0, score_vers_intervention = 0, score_trajet_logistique = 0, score_retour_caserne = 0
+*/
+
+
+/*
+* REUSSIR A AVOIR LES ID OU LA POSITION CHANGE
+* PRENDRE L'ID LE PLUS PROCHE DU STOP
+* CALCULER LA QUALITE DU STOP EN FONCTION DE LA DERNIERE POSITION GPS ET ID STOP
+* 
+*/
+
+
+-- DROP MATERIALIZED VIEW QUAL_STOP_2016
+CREATE MATERIALIZED VIEW qual_before_stop AS
+SELECT id , (1-(ABS(MAX(id_ligne-id_start)::DECIMAL))/20)::NUMERIC(4,2) as quality_before_stop 
+FROM pos_traitee, mview_arret_concat1 
+where id_ligne > id_start-20 AND id_ligne <= id_start AND pos_traitee.IS_GPS_UPDATED_OR IS TRUE
+group by id
+
+-- DROP MATERIALIZED VIEW qual_after_stop
+CREATE MATERIALIZED VIEW qual_after_stop AS
+SELECT id , (1-(ABS(MIN(id_ligne-id_end)::DECIMAL))/20)::NUMERIC(4,2) as quality_after_stop 
+FROM pos_traitee, mview_arret_concat1 
+where id_ligne >= id_END AND id_ligne < id_end+20 AND pos_traitee.IS_GPS_UPDATED_OR IS TRUE
+group by id
+
+
+SELECT * FROM qual_before_stop
+FULL JOIN qual_after_stop on qual_before_stop.id = qual_after_stop.id;
+
+
+SELECT (5::DECIMAL/20)
+SELECT * FROM QUAL_STOP_2016 WHERE id = 11
+SELECT MVIEW_ARRET_CONCAT1.id FROM MVIEW_ARRET_CONCAT1 WHERE MVIEW_ARRET_CONCAT1.id NOT IN (SELECT id FROM QUAL_STOP_2016)
+
+
+SELECT * FROM MVIEW_ARRET_CONCAT1 where id = 1468
+
+SELECT * FROM QUALITY_STOP_2016 where id = 1468
+
+SELECT * FROM POS_TRAITEE WHERE ID_LIGNE >= 3786516 AND ID_LIGNE <=3786516+20
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+/*
+* REUSSIR A AVOIR LES ID OU LA POSITION CHANGE
+* PRENDRE L'ID LE PLUS PROCHE DU STOP
+* CALCULER LA QUALITE DU STOP EN FONCTION DE LA DERNIERE POSITION GPS ET ID STOP
+*/
+
+
+-- DROP MATERIALIZED VIEW qual_before_stop
+CREATE MATERIALIZED VIEW qual_before_stop AS
+SELECT id , (1-(ABS(MAX(t2.id_ligne-id_start)::DECIMAL))/20)::NUMERIC(4,2) as quality_before_stop ,
+ST_DISTANCE(t1.geom2154, t2.geom2154) as distance
+FROM pos_traitee t1, pos_traitee t2, mview_arret_concat1 
+where t2.id_ligne > id_start-20 AND t2.id_ligne <= id_start AND t2.IS_GPS_UPDATED_OR IS TRUE
+and t1.id_ligne = id_start
+group by id, distance
+
+-- DROP MATERIALIZED VIEW qual_after_stop
+CREATE MATERIALIZED VIEW qual_after_stop AS
+SELECT id , (1-(ABS(MIN(t1.id_ligne-id_end)::DECIMAL))/20)::NUMERIC(4,2) as quality_after_stop ,
+ST_DISTANCE(t1.geom2154, t2.geom2154) as distance
+FROM pos_traitee t1, pos_traitee t2, mview_arret_concat1 
+where t1.id_ligne >= id_END AND t1.id_ligne < id_end+20 AND t1.IS_GPS_UPDATED_OR IS TRUE
+and t2.id_ligne = id_END
+group by id, distance
+
+
+SELECT * FROM qual_before_stop FULL JOIN qual_after_stop on qual_before_stop.id = qual_after_stop.id
+
+SELECT DISTINCT ON (qual_before_stop.id)
+qual_before_stop.id,
+MAX(quality_before_stop) as quality_before_stop,
+qual_before_stop.distance as distance_before_stop,
+MAX(quality_after_stop) as quality_after_stop,
+qual_after_stop.distance as distance_after_stop
+FROM qual_before_stop FULL JOIN qual_after_stop on qual_before_stop.id = qual_after_stop.id
+group by qual_before_stop.id, qual_before_stop.distance, qual_after_stop.distance
+
+
+-- FUNCTION: public.get_gps_speed(integer, integer)
+
+-- DROP FUNCTION public.get_gps_speed(integer, integer);
+------------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION public.get_gps_speed(
+	debut integer,
+	fin integer)
+    RETURNS real
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+AS $BODY$ 
+DECLARE
+   somme_dist FLOAT(8) := 0 ;
+   i pos_traitee%rowtype;
+BEGIN
+	for i IN
+		SELECT * FROM pos_traitee where ID_LIGNE >= debut AND ID_LIGNE <fin order by id_ligne DESC
+	LOOP 
+		somme_dist = somme_dist + i."SPEED"/3.6;
+		EXIT WHEN  i."is_gps_updated_or" is TRUE; 
+	END LOOP ; 
+	RETURN somme_dist ;
+END; 
+$BODY$;
+
+ALTER FUNCTION public.get_gps_speed(integer, integer)
+    OWNER TO postgres;
+
+-- DROP MATERIALIZED VIEW qual_before_stop CASCADE
+CREATE MATERIALIZED VIEW qual_before_stop AS
+SELECT id , (1-(ABS(MAX(t2.id_ligne-id_start)::DECIMAL))/20)::NUMERIC(4,2) as quality_before_stop ,
+get_gps_speed(id_start-20,id_start) as cpt_distance_before_stop
+FROM pos_traitee t1, pos_traitee t2, mview_arret_concat1 
+where t2.id_ligne > id_start-20 AND t2.id_ligne <= id_start AND t2.IS_GPS_UPDATED_OR IS TRUE
+and t1.id_ligne = id_start
+group by id, cpt_distance_before_stop
+
+-- DROP MATERIALIZED VIEW qual_after_stop CASCADE
+CREATE MATERIALIZED VIEW qual_after_stop AS
+SELECT id , (1-(ABS(MIN(t1.id_ligne-id_end)::DECIMAL))/20)::NUMERIC(4,2) as quality_after_stop ,
+get_gps_speed(id_end,id_end+20) as cpt_distance_after_stop,
+ST_DISTANCE(t1.geom2154, t2.geom2154) as st_distance
+FROM pos_traitee t1, pos_traitee t2, mview_arret_concat1 
+where t1.id_ligne >= id_END AND t1.id_ligne < id_end+20 AND t1.IS_GPS_UPDATED_OR IS TRUE
+and t2.id_ligne = id_END
+group by id, cpt_distance_after_stop, st_distance
+
+
+SELECT DISTINCT ON (qual_before_stop.id)
+qual_before_stop.id,
+MAX(quality_before_stop) as quality_before_stop,
+qual_before_stop.cpt_distance_before_stop as distance_before_stop_cpt,
+MAX(quality_after_stop) as quality_after_stop,
+qual_after_stop.cpt_distance_after_stop as distance_after_stop_cpt,
+qual_after_stop.st_distance as st_distance,
+(qual_before_stop.cpt_distance_before_stop + qual_after_stop.cpt_distance_after_stop - qual_after_stop.st_distance) as delta
+FROM qual_before_stop FULL JOIN qual_after_stop on qual_before_stop.id = qual_after_stop.id
+group by qual_before_stop.id, qual_before_stop.cpt_distance_before_stop, qual_after_stop.cpt_distance_after_stop, qual_after_stop.st_distance 
+
+
+SELECT * FROM MVIEW_ARRET_CONCAT1 where id = 184
+
+SELECT * FROM pos_traitee where id_ligne >= 669844-20 and id_ligne <= 671553+20
+
+SELECT * from test where id = 184
+
+
+
+--ADDING COLUMN TO POS_TRAITEE
+ALTER TABLE POS_TRAITEE
+ADD COLUMN IS_GPS_UPDATED_AND boolean DEFAULT FALSE;
+
+ALTER TABLE POS_TRAITEE
+ADD COLUMN IS_GPS_UPDATED_OR boolean DEFAULT FALSE;
+
+--IDX ON POS_TRAITEE FOR LONG / LAT
+CREATE INDEX idx_longitude_pos_traitee
+    ON public.pos_traitee USING btree
+    ("LONGITUDE")
+    TABLESPACE pg_default;
+
+CREATE INDEX idx_latitude_pos_traitee
+    ON public.pos_traitee USING btree
+    ("LATITUDE")
+    TABLESPACE pg_default;
+
+--GETTING RESULTS
+-- IF LONGITUDE AND LATITUDE DIFFERENT FROM LAST RECORD THEN TRUE ELSE FALSE
+UPDATE POS_TRAITEE
+SET "is_gps_updated_and" = TRUE
+FROM POS_TRAITEE T1
+WHERE POS_TRAITEE."id_ligne" = T1."id_ligne" + 1 AND (POS_TRAITEE."LONGITUDE" != T1."LONGITUDE" AND POS_TRAITEE."LATITUDE" != T1."LATITUDE") AND POS_TRAITEE."id_vehicule" = T1."id_vehicule";
+
+-- IF LONGITUDE OR LATITUDE DIFFERENT FROM LAST RECORD THEN TRUE ELSE FALSE
+UPDATE POS_TRAITEE
+SET "is_gps_updated_or" = TRUE
+FROM POS_TRAITEE T1
+WHERE POS_TRAITEE."id_ligne" = T1."id_ligne" + 1 AND (POS_TRAITEE."LONGITUDE" != T1."LONGITUDE" OR POS_TRAITEE."LATITUDE" != T1."LATITUDE") AND POS_TRAITEE."id_vehicule" = T1."id_vehicule";
+
+
+----- 1 EXEC ONLY
+DROP MATERIALIZED VIEW mview_trajets_stop_concat1_v3;
+DROP MATERIALIZED VIEW mview_trajets_stop_concat1_v4;
+
+ALTER TABLE RESULTAT_STOP
+ADD COLUMN percent_gps_updated NUMERIC(7,2);
+
+
+--QUALITY STOP OF YEAR 2016
+CREATE MATERIALIZED VIEW  mview_arret_concat1_v5_2016 as
+SELECT mview_arret_concat1.id,
+(SUM(CASE WHEN pos_traitee."is_gps_updated_or" is true THEN 1 ELSE 0 END)::INTEGER) AS number_pts_updated_OR,
+(SUM(CASE WHEN pos_traitee."is_gps_updated_and" is true THEN 1 ELSE 0 END)::INTEGER) AS number_pts_updated_AND,
+COUNT(pos_traitee.id_ligne) as TTX_logs,
+(SUM(CASE WHEN pos_traitee."TIME_STOP" = 1 THEN 1 ELSE 0 END)::INTEGER) AS number_contact_on
+FROM mview_arret_concat1, pos_traitee
+WHERE pos_traitee.id_ligne >= mview_arret_concat1.id_start and pos_traitee.id_ligne <= mview_arret_concat1.id_end
+and pos_traitee."DATE" >= '2016-11-15 00:00:00' and pos_traitee."DATE" <= '2019-08-10 00:00:00'
+GROUP BY mview_arret_concat1.id, mview_arret_concat1.id_vehicule, mview_arret_concat1.id_start, mview_arret_concat1.id_end, mview_arret_concat1.ts_start, mview_arret_concat1.ts_end, mview_arret_concat1.point_start, mview_arret_concat1.point_end, mview_arret_concat1.duree, mview_arret_concat1.point_median, mview_arret_concat1.ok_percent;
+
+
+
+--QUALITY STOP OF YEAR 2019
+CREATE MATERIALIZED VIEW  mview_arret_concat1_v5_2019 as
+SELECT mview_arret_concat1.id,
+(SUM(CASE WHEN pos_traitee."is_gps_updated_or" is true THEN 1 ELSE 0 END)::INTEGER) AS number_pts_updated_OR,
+(SUM(CASE WHEN pos_traitee."is_gps_updated_and" is true THEN 1 ELSE 0 END)::INTEGER) AS number_pts_updated_AND,
+COUNT(pos_traitee.id_ligne) as TTX_logs,
+(SUM(CASE WHEN pos_traitee."TIME_STOP" = 1 THEN 1 ELSE 0 END)::INTEGER) AS number_contact_on
+FROM mview_arret_concat1, pos_traitee
+WHERE pos_traitee.id_ligne >= mview_arret_concat1.id_start and pos_traitee.id_ligne <= mview_arret_concat1.id_end
+and pos_traitee."DATE" >= '2019-08-01 00:00:00' and pos_traitee."DATE" <= '2019-08-31 23:59:59'
+GROUP BY mview_arret_concat1.id, mview_arret_concat1.id_vehicule, mview_arret_concat1.id_start, mview_arret_concat1.id_end, mview_arret_concat1.ts_start, mview_arret_concat1.ts_end, mview_arret_concat1.point_start, mview_arret_concat1.point_end, mview_arret_concat1.duree, mview_arret_concat1.point_median, mview_arret_concat1.ok_percent;
+
+
+
+-- QUALITY STOP 2016
+CREATE TABLE quality_stop_2016 as
+select * from mview_arret_concat1_v5_2016;
+
+Alter table quality_stop_2016
+add column stop_5 integer,
+add column stop_10 integer,
+add column stop_15 integer,
+add column stop_20 integer,
+add column stop5 integer,
+add column stop10 integer,
+add column stop15 integer,
+add column stop20 integer,
+add column stopttx integer;
+
+drop materialized view stop_5_2016;
+drop materialized view stop_10_2016;
+drop materialized view stop_15_2016;
+drop materialized view stop_20_2016;
+drop materialized view stop5_2016;
+drop materialized view stop10_2016;
+drop materialized view stop15_2016;
+drop materialized view stop20_2016;
+drop materialized view stopttx_2016;
+
+--AVANT STOP
+CREATE MATERIALIZED VIEW stop_5_2016 as
+SELECT mview_arret_concat1.id,
+(SUM(CASE WHEN pos_traitee."is_gps_updated_or" is true THEN 1 ELSE 0 END)::INTEGER) AS stop_5
+FROM mview_arret_concat1, pos_traitee
+WHERE pos_traitee.id_ligne >= (mview_arret_concat1.id_start - 4) and pos_traitee.id_ligne <= mview_arret_concat1.id_start
+and pos_traitee."DATE" >= '2016-11-15 00:00:00' and pos_traitee."DATE" <= '2019-08-10 00:00:00'
+GROUP BY mview_arret_concat1.id, mview_arret_concat1.id_vehicule, mview_arret_concat1.id_start, mview_arret_concat1.id_end, mview_arret_concat1.ts_start, mview_arret_concat1.ts_end, mview_arret_concat1.point_start, mview_arret_concat1.point_end, mview_arret_concat1.duree, mview_arret_concat1.point_median, mview_arret_concat1.ok_percent;
+
+CREATE MATERIALIZED VIEW stop_10_2016 as
+SELECT mview_arret_concat1.id,
+(SUM(CASE WHEN pos_traitee."is_gps_updated_or" is true THEN 1 ELSE 0 END)::INTEGER) AS stop_10
+FROM mview_arret_concat1, pos_traitee
+WHERE pos_traitee.id_ligne >= (mview_arret_concat1.id_start - 9) and pos_traitee.id_ligne <= mview_arret_concat1.id_start
+and pos_traitee."DATE" >= '2016-11-15 00:00:00' and pos_traitee."DATE" <= '2019-08-10 00:00:00'
+GROUP BY mview_arret_concat1.id, mview_arret_concat1.id_vehicule, mview_arret_concat1.id_start, mview_arret_concat1.id_end, mview_arret_concat1.ts_start, mview_arret_concat1.ts_end, mview_arret_concat1.point_start, mview_arret_concat1.point_end, mview_arret_concat1.duree, mview_arret_concat1.point_median, mview_arret_concat1.ok_percent;
+
+CREATE MATERIALIZED VIEW stop_15_2016 as
+SELECT mview_arret_concat1.id,
+(SUM(CASE WHEN pos_traitee."is_gps_updated_or" is true THEN 1 ELSE 0 END)::INTEGER) AS stop_15
+FROM mview_arret_concat1, pos_traitee
+WHERE pos_traitee.id_ligne >= (mview_arret_concat1.id_start - 14) and pos_traitee.id_ligne <= mview_arret_concat1.id_start
+and pos_traitee."DATE" >= '2016-11-15 00:00:00' and pos_traitee."DATE" <= '2019-08-10 00:00:00'
+GROUP BY mview_arret_concat1.id, mview_arret_concat1.id_vehicule, mview_arret_concat1.id_start, mview_arret_concat1.id_end, mview_arret_concat1.ts_start, mview_arret_concat1.ts_end, mview_arret_concat1.point_start, mview_arret_concat1.point_end, mview_arret_concat1.duree, mview_arret_concat1.point_median, mview_arret_concat1.ok_percent;
+
+CREATE MATERIALIZED VIEW stop_20_2016 as
+SELECT mview_arret_concat1.id,
+(SUM(CASE WHEN pos_traitee."is_gps_updated_or" is true THEN 1 ELSE 0 END)::INTEGER) AS stop_20
+FROM mview_arret_concat1, pos_traitee
+WHERE pos_traitee.id_ligne >= (mview_arret_concat1.id_start - 19) and pos_traitee.id_ligne <= mview_arret_concat1.id_start
+and pos_traitee."DATE" >= '2016-11-15 00:00:00' and pos_traitee."DATE" <= '2019-08-10 00:00:00'
+GROUP BY mview_arret_concat1.id, mview_arret_concat1.id_vehicule, mview_arret_concat1.id_start, mview_arret_concat1.id_end, mview_arret_concat1.ts_start, mview_arret_concat1.ts_end, mview_arret_concat1.point_start, mview_arret_concat1.point_end, mview_arret_concat1.duree, mview_arret_concat1.point_median, mview_arret_concat1.ok_percent;
+
+--APRES STOP
+CREATE MATERIALIZED VIEW stop5_2016 as
+SELECT mview_arret_concat1.id,
+(SUM(CASE WHEN pos_traitee."is_gps_updated_or" is true THEN 1 ELSE 0 END)::INTEGER) AS stop5
+FROM mview_arret_concat1, pos_traitee
+WHERE pos_traitee.id_ligne >= (mview_arret_concat1.id_end) and pos_traitee.id_ligne <= (mview_arret_concat1.id_end +4)
+and pos_traitee."DATE" >= '2016-11-15 00:00:00' and pos_traitee."DATE" <= '2019-08-10 00:00:00'
+GROUP BY mview_arret_concat1.id, mview_arret_concat1.id_vehicule, mview_arret_concat1.id_start, mview_arret_concat1.id_end, mview_arret_concat1.ts_start, mview_arret_concat1.ts_end, mview_arret_concat1.point_start, mview_arret_concat1.point_end, mview_arret_concat1.duree, mview_arret_concat1.point_median, mview_arret_concat1.ok_percent;
+
+CREATE MATERIALIZED VIEW stop10_2016 as
+SELECT mview_arret_concat1.id,
+(SUM(CASE WHEN pos_traitee."is_gps_updated_or" is true THEN 1 ELSE 0 END)::INTEGER) AS stop10
+FROM mview_arret_concat1, pos_traitee
+WHERE pos_traitee.id_ligne >= (mview_arret_concat1.id_end ) and pos_traitee.id_ligne <= (mview_arret_concat1.id_end +9)
+and pos_traitee."DATE" >= '2016-11-15 00:00:00' and pos_traitee."DATE" <= '2019-08-10 00:00:00'
+GROUP BY mview_arret_concat1.id, mview_arret_concat1.id_vehicule, mview_arret_concat1.id_start, mview_arret_concat1.id_end, mview_arret_concat1.ts_start, mview_arret_concat1.ts_end, mview_arret_concat1.point_start, mview_arret_concat1.point_end, mview_arret_concat1.duree, mview_arret_concat1.point_median, mview_arret_concat1.ok_percent;
+
+CREATE MATERIALIZED VIEW stop15_2016 as
+SELECT mview_arret_concat1.id,
+(SUM(CASE WHEN pos_traitee."is_gps_updated_or" is true THEN 1 ELSE 0 END)::INTEGER) AS stop15
+FROM mview_arret_concat1, pos_traitee
+WHERE pos_traitee.id_ligne >= (mview_arret_concat1.id_end ) and pos_traitee.id_ligne <= (mview_arret_concat1.id_end +14)
+and pos_traitee."DATE" >= '2016-11-15 00:00:00' and pos_traitee."DATE" <= '2019-08-10 00:00:00'
+GROUP BY mview_arret_concat1.id, mview_arret_concat1.id_vehicule, mview_arret_concat1.id_start, mview_arret_concat1.id_end, mview_arret_concat1.ts_start, mview_arret_concat1.ts_end, mview_arret_concat1.point_start, mview_arret_concat1.point_end, mview_arret_concat1.duree, mview_arret_concat1.point_median, mview_arret_concat1.ok_percent;
+
+CREATE MATERIALIZED VIEW stop20_2016 as
+SELECT mview_arret_concat1.id,
+(SUM(CASE WHEN pos_traitee."is_gps_updated_or" is true THEN 1 ELSE 0 END)::INTEGER) AS stop20
+FROM mview_arret_concat1, pos_traitee
+WHERE pos_traitee.id_ligne >= (mview_arret_concat1.id_end ) and pos_traitee.id_ligne <= (mview_arret_concat1.id_end +19)
+and pos_traitee."DATE" >= '2016-11-15 00:00:00' and pos_traitee."DATE" <= '2019-08-10 00:00:00'
+GROUP BY mview_arret_concat1.id, mview_arret_concat1.id_vehicule, mview_arret_concat1.id_start, mview_arret_concat1.id_end, mview_arret_concat1.ts_start, mview_arret_concat1.ts_end, mview_arret_concat1.point_start, mview_arret_concat1.point_end, mview_arret_concat1.duree, mview_arret_concat1.point_median, mview_arret_concat1.ok_percent;
+
+CREATE MATERIALIZED VIEW stopttx_2016 as
+SELECT mview_arret_concat1.id,
+(SUM(CASE WHEN pos_traitee."is_gps_updated_or" is true THEN 1 ELSE 0 END)::INTEGER) AS stopttx
+FROM mview_arret_concat1, pos_traitee
+WHERE pos_traitee.id_ligne >= (mview_arret_concat1.id_start -19 ) and pos_traitee.id_ligne <= (mview_arret_concat1.id_end +19)
+and pos_traitee."DATE" >= '2016-11-15 00:00:00' and pos_traitee."DATE" <= '2019-08-10 00:00:00'
+GROUP BY mview_arret_concat1.id, mview_arret_concat1.id_vehicule, mview_arret_concat1.id_start, mview_arret_concat1.id_end, mview_arret_concat1.ts_start, mview_arret_concat1.ts_end, mview_arret_concat1.point_start, mview_arret_concat1.point_end, mview_arret_concat1.duree, mview_arret_concat1.point_median, mview_arret_concat1.ok_percent;
+
+
+
+update quality_stop_2016
+set stop5 = stop5_2016.stop5
+from stop5_2016
+where quality_stop_2016.id = stop5_2016.id;
+
+update quality_stop_2016
+set stop10 = stop10_2016.stop10
+from stop10_2016
+where quality_stop_2016.id = stop10_2016.id;
+
+update quality_stop_2016
+set stop15 = stop15_2016.stop15
+from stop15_2016
+where quality_stop_2016.id = stop15_2016.id;
+
+update quality_stop_2016
+set stop20 = stop20_2016.stop20
+from stop20_2016
+where quality_stop_2016.id = stop20_2016.id;
+
+
+
+update quality_stop_2016
+set stop_5 = stop_5_2016.stop_5
+from stop_5_2016
+where quality_stop_2016.id = stop_5_2016.id;
+
+update quality_stop_2016
+set stop_10 = stop_10_2016.stop_10
+from stop_10_2016
+where quality_stop_2016.id = stop_10_2016.id;
+
+update quality_stop_2016
+set stop_15 = stop_15_2016.stop_15
+from stop_15_2016
+where quality_stop_2016.id = stop_15_2016.id;
+update quality_stop_2016
+set stop_20 = stop_20_2016.stop_20
+from stop_20_2016
+where quality_stop_2016.id = stop_20_2016.id;
+
+update quality_stop_2016
+set stopttx = stopttx_2016.stopttx
+from stopttx_2016
+where quality_stop_2016.id = stopttx_2016.id;
+
+
+
+-- QUALITY STOP 2019
+CREATE TABLE quality_stop_2019 as
+select * from mview_arret_concat1_v5_2019;
+
+Alter table quality_stop_2019
+add column stop_5 integer,
+add column stop_10 integer,
+add column stop_15 integer,
+add column stop_20 integer,
+add column stop5 integer,
+add column stop10 integer,
+add column stop15 integer,
+add column stop20 integer,
+add column stopttx integer;
+
+
+--AVANT STOP 
+CREATE MATERIALIZED VIEW stop_5_2019 as
+SELECT mview_arret_concat1.id,
+(SUM(CASE WHEN pos_traitee."is_gps_updated_or" is true THEN 1 ELSE 0 END)::INTEGER) AS stop_5
+FROM mview_arret_concat1, pos_traitee
+WHERE pos_traitee.id_ligne >= (mview_arret_concat1.id_start - 4) and pos_traitee.id_ligne <= mview_arret_concat1.id_start
+and pos_traitee."DATE" >= '2019-08-01 00:00:00' and pos_traitee."DATE" <= '2019-09-02 00:00:00'
+GROUP BY mview_arret_concat1.id, mview_arret_concat1.id_vehicule, mview_arret_concat1.id_start, mview_arret_concat1.id_end, mview_arret_concat1.ts_start, mview_arret_concat1.ts_end, mview_arret_concat1.point_start, mview_arret_concat1.point_end, mview_arret_concat1.duree, mview_arret_concat1.point_median, mview_arret_concat1.ok_percent;
+
+CREATE MATERIALIZED VIEW stop_10_2019 as
+SELECT mview_arret_concat1.id,
+(SUM(CASE WHEN pos_traitee."is_gps_updated_or" is true THEN 1 ELSE 0 END)::INTEGER) AS stop_10
+FROM mview_arret_concat1, pos_traitee
+WHERE pos_traitee.id_ligne >= (mview_arret_concat1.id_start - 9) and pos_traitee.id_ligne <= mview_arret_concat1.id_start
+and pos_traitee."DATE" >= '2019-08-01 00:00:00' and pos_traitee."DATE" <= '2019-09-02 00:00:00'
+GROUP BY mview_arret_concat1.id, mview_arret_concat1.id_vehicule, mview_arret_concat1.id_start, mview_arret_concat1.id_end, mview_arret_concat1.ts_start, mview_arret_concat1.ts_end, mview_arret_concat1.point_start, mview_arret_concat1.point_end, mview_arret_concat1.duree, mview_arret_concat1.point_median, mview_arret_concat1.ok_percent;
+
+CREATE MATERIALIZED VIEW stop_15_2019 as
+SELECT mview_arret_concat1.id,
+(SUM(CASE WHEN pos_traitee."is_gps_updated_or" is true THEN 1 ELSE 0 END)::INTEGER) AS stop_15
+FROM mview_arret_concat1, pos_traitee
+WHERE pos_traitee.id_ligne >= (mview_arret_concat1.id_start - 14) and pos_traitee.id_ligne <= mview_arret_concat1.id_start
+and pos_traitee."DATE" >= '2019-08-01 00:00:00' and pos_traitee."DATE" <= '2019-09-02 00:00:00'
+GROUP BY mview_arret_concat1.id, mview_arret_concat1.id_vehicule, mview_arret_concat1.id_start, mview_arret_concat1.id_end, mview_arret_concat1.ts_start, mview_arret_concat1.ts_end, mview_arret_concat1.point_start, mview_arret_concat1.point_end, mview_arret_concat1.duree, mview_arret_concat1.point_median, mview_arret_concat1.ok_percent;
+
+CREATE MATERIALIZED VIEW stop_20_2019 as
+SELECT mview_arret_concat1.id,
+(SUM(CASE WHEN pos_traitee."is_gps_updated_or" is true THEN 1 ELSE 0 END)::INTEGER) AS stop_20
+FROM mview_arret_concat1, pos_traitee
+WHERE pos_traitee.id_ligne >= (mview_arret_concat1.id_start - 19) and pos_traitee.id_ligne <= mview_arret_concat1.id_start
+and pos_traitee."DATE" >= '2019-08-01 00:00:00' and pos_traitee."DATE" <= '2019-09-02 00:00:00'
+GROUP BY mview_arret_concat1.id, mview_arret_concat1.id_vehicule, mview_arret_concat1.id_start, mview_arret_concat1.id_end, mview_arret_concat1.ts_start, mview_arret_concat1.ts_end, mview_arret_concat1.point_start, mview_arret_concat1.point_end, mview_arret_concat1.duree, mview_arret_concat1.point_median, mview_arret_concat1.ok_percent;
+
+CREATE MATERIALIZED VIEW stopttx_2019 as
+SELECT mview_arret_concat1.id,
+(SUM(CASE WHEN pos_traitee."is_gps_updated_or" is true THEN 1 ELSE 0 END)::INTEGER) AS stop_5
+FROM mview_arret_concat1, pos_traitee
+WHERE pos_traitee.id_ligne >= (mview_arret_concat1.id_start - 19) and pos_traitee.id_ligne <= (mview_arret_concat1.id_end +19)
+and pos_traitee."DATE" >= '2019-08-01 00:00:00' and pos_traitee."DATE" <= '2019-09-02 00:00:00'
+GROUP BY mview_arret_concat1.id, mview_arret_concat1.id_vehicule, mview_arret_concat1.id_start, mview_arret_concat1.id_end, mview_arret_concat1.ts_start, mview_arret_concat1.ts_end, mview_arret_concat1.point_start, mview_arret_concat1.point_end, mview_arret_concat1.duree, mview_arret_concat1.point_median, mview_arret_concat1.ok_percent;
+
+
+
+-- APRES STOP
+CREATE MATERIALIZED VIEW stop5_2019 as
+SELECT mview_arret_concat1.id,
+(SUM(CASE WHEN pos_traitee."is_gps_updated_or" is true THEN 1 ELSE 0 END)::INTEGER) AS stop5
+FROM mview_arret_concat1, pos_traitee
+WHERE pos_traitee.id_ligne >= (mview_arret_concat1.id_end) and pos_traitee.id_ligne <= (mview_arret_concat1.id_end +4)
+and pos_traitee."DATE" >= '2019-08-01 00:00:00' and pos_traitee."DATE" <= '2019-09-02 00:00:00'
+GROUP BY mview_arret_concat1.id, mview_arret_concat1.id_vehicule, mview_arret_concat1.id_start, mview_arret_concat1.id_end, mview_arret_concat1.ts_start, mview_arret_concat1.ts_end, mview_arret_concat1.point_start, mview_arret_concat1.point_end, mview_arret_concat1.duree, mview_arret_concat1.point_median, mview_arret_concat1.ok_percent;
+
+CREATE MATERIALIZED VIEW stop10_2019 as
+SELECT mview_arret_concat1.id,
+(SUM(CASE WHEN pos_traitee."is_gps_updated_or" is true THEN 1 ELSE 0 END)::INTEGER) AS stop10
+FROM mview_arret_concat1, pos_traitee
+WHERE pos_traitee.id_ligne >= (mview_arret_concat1.id_end ) and pos_traitee.id_ligne <= (mview_arret_concat1.id_end +9)
+and pos_traitee."DATE" >= '2019-08-01 00:00:00' and pos_traitee."DATE" <= '2019-09-02 00:00:00'
+GROUP BY mview_arret_concat1.id, mview_arret_concat1.id_vehicule, mview_arret_concat1.id_start, mview_arret_concat1.id_end, mview_arret_concat1.ts_start, mview_arret_concat1.ts_end, mview_arret_concat1.point_start, mview_arret_concat1.point_end, mview_arret_concat1.duree, mview_arret_concat1.point_median, mview_arret_concat1.ok_percent;
+
+CREATE MATERIALIZED VIEW stop15_2019 as
+SELECT mview_arret_concat1.id,
+(SUM(CASE WHEN pos_traitee."is_gps_updated_or" is true THEN 1 ELSE 0 END)::INTEGER) AS stop15
+FROM mview_arret_concat1, pos_traitee
+WHERE pos_traitee.id_ligne >= (mview_arret_concat1.id_end ) and pos_traitee.id_ligne <= (mview_arret_concat1.id_end +14)
+and pos_traitee."DATE" >= '2019-08-01 00:00:00' and pos_traitee."DATE" <= '2019-09-02 00:00:00'
+GROUP BY mview_arret_concat1.id, mview_arret_concat1.id_vehicule, mview_arret_concat1.id_start, mview_arret_concat1.id_end, mview_arret_concat1.ts_start, mview_arret_concat1.ts_end, mview_arret_concat1.point_start, mview_arret_concat1.point_end, mview_arret_concat1.duree, mview_arret_concat1.point_median, mview_arret_concat1.ok_percent;
+
+CREATE MATERIALIZED VIEW stop20_2019 as
+SELECT mview_arret_concat1.id,
+(SUM(CASE WHEN pos_traitee."is_gps_updated_or" is true THEN 1 ELSE 0 END)::INTEGER) AS stop20
+FROM mview_arret_concat1, pos_traitee
+WHERE pos_traitee.id_ligne >= (mview_arret_concat1.id_end ) and pos_traitee.id_ligne <= (mview_arret_concat1.id_end +19)
+and pos_traitee."DATE" >= '2019-08-01 00:00:00' and pos_traitee."DATE" <= '2019-09-02 00:00:00'
+GROUP BY mview_arret_concat1.id, mview_arret_concat1.id_vehicule, mview_arret_concat1.id_start, mview_arret_concat1.id_end, mview_arret_concat1.ts_start, mview_arret_concat1.ts_end, mview_arret_concat1.point_start, mview_arret_concat1.point_end, mview_arret_concat1.duree, mview_arret_concat1.point_median, mview_arret_concat1.ok_percent;
+
+CREATE MATERIALIZED VIEW stopttx_2019 as
+SELECT mview_arret_concat1.id,
+(SUM(CASE WHEN pos_traitee."is_gps_updated_or" is true THEN 1 ELSE 0 END)::INTEGER) AS stopttx
+FROM mview_arret_concat1, pos_traitee
+WHERE pos_traitee.id_ligne >= (mview_arret_concat1.id_start -19 ) and pos_traitee.id_ligne <= (mview_arret_concat1.id_end +19)
+and pos_traitee."DATE" >= '2019-08-01 00:00:00' and pos_traitee."DATE" <= '2019-09-02 00:00:00'
+GROUP BY mview_arret_concat1.id, mview_arret_concat1.id_vehicule, mview_arret_concat1.id_start, mview_arret_concat1.id_end, mview_arret_concat1.ts_start, mview_arret_concat1.ts_end, mview_arret_concat1.point_start, mview_arret_concat1.point_end, mview_arret_concat1.duree, mview_arret_concat1.point_median, mview_arret_concat1.ok_percent;
+
+
+
+
+update quality_stop_2019
+set stop5 = stop5_2019.stop5
+from stop5_2019
+where quality_stop_2019.id = stop5_2019.id;
+
+update quality_stop_2019
+set stop10 = stop10_2019.stop10
+from stop10_2019
+where quality_stop_2019.id = stop10_2019.id;
+
+update quality_stop_2019
+set stop15 = stop15_2019.stop15
+from stop15_2019
+where quality_stop_2019.id = stop15_2019.id;
+
+update quality_stop_2019
+set stop20 = stop20_2019.stop20
+from stop20_2019
+where quality_stop_2019.id = stop20_2019.id;
+
+
+
+update quality_stop_2019
+set stop_5 = stop_5_2019.stop_5
+from stop_5_2019
+where quality_stop_2019.id = stop_5_2019.id;
+
+update quality_stop_2019
+set stop_10 = stop_10_2019.stop_10
+from stop_10_2019
+where quality_stop_2019.id = stop_10_2019.id;
+
+update quality_stop_2019
+set stop_15 = stop_15_2019.stop_15
+from stop_15_2019
+where quality_stop_2019.id = stop_15_2019.id;
+update quality_stop_2019
+set stop_20 = stop_20_2019.stop_20
+from stop_20_2019
+where quality_stop_2019.id = stop_20_2019.id;
+
+update quality_stop_2019
+set stopttx = stopttx_2019.stopttx
+from stopttx_2019
+where quality_stop_2019.id = stopttx_2019.id;
+
+
+drop materialized view stop_5_2019;
+drop materialized view stop_10_2019;
+drop materialized view stop_15_2019;
+drop materialized view stop_20_2019;
+drop materialized view stop5_2019;
+drop materialized view stop10_2019;
+drop materialized view stop15_2019;
+drop materialized view stop20_2019;
+drop materialized view stopttx_2019;
