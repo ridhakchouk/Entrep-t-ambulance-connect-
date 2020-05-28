@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmi:XMI xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:TalendMetadata="http://www.talend.org/metadata/connection/2010" xmlns:orgomg.cwm.resource.record="http:///orgomg/cwm/resource/record.ecore">
+  <TalendMetadata:DelimitedFileConnection xmi:id="_6CR5UKPqEemkxs57kDHJcg" name="get_schema" dataPackage="_6CR5UaPqEemkxs57kDHJcg" Server="Localhost 127.0.0.1" FilePath="/users/21407340t/Desktop/Talend source files/CSV/0001.csv" Encoding="UTF-8" FieldSeparatorValue="&quot;,&quot;" RowSeparatorValue="&quot;\n&quot;" UseHeader="true" HeaderValue="5" FirstLineCaption="true" FieldSeparatorType="Comma"/>
+  <orgomg.cwm.resource.record:RecordFile xmi:id="_6CR5UaPqEemkxs57kDHJcg" name="default" dataManager="_6CR5UKPqEemkxs57kDHJcg">
+    <ownedElement xsi:type="TalendMetadata:MetadataTable" xmi:id="_6CR5UqPqEemkxs57kDHJcg" id="_M0rTQKPpEemkxs57kDHJcg" label="metadata">
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CR5U6PqEemkxs57kDHJcg" label="Date" length="10" talendType="id_Date" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgYKPqEemkxs57kDHJcg" label="Time" length="8" talendType="id_String" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgYaPqEemkxs57kDHJcg" label="RPM" length="1" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgYqPqEemkxs57kDHJcg" label="SPEED_km_h_" length="3" precision="2" talendType="id_Float" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgY6PqEemkxs57kDHJcg" label="RIGHT_FLASH" length="1" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgZKPqEemkxs57kDHJcg" label="LEFT_FLASH" length="1" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgZaPqEemkxs57kDHJcg" label="BRAKE_PEDAL" length="1" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgZqPqEemkxs57kDHJcg" label="PRIMARY_LT" length="1" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgZ6PqEemkxs57kDHJcg" label="SECONDARY_LT" length="1" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgaKPqEemkxs57kDHJcg" label="WIG_WAG_LT" length="1" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgaaPqEemkxs57kDHJcg" label="REVERSE_GEAR" length="1" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgaqPqEemkxs57kDHJcg" label="CHASSIS_VOLT_V_" length="5" precision="3" talendType="id_Float" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSga6PqEemkxs57kDHJcg" label="CONVERS_VOLT_V_" length="5" precision="3" talendType="id_Float" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgbKPqEemkxs57kDHJcg" label="RADIO_VOLT_V_" length="4" precision="3" talendType="id_Float" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgbaPqEemkxs57kDHJcg" label="PARKING_LT" length="1" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgbqPqEemkxs57kDHJcg" label="HIGH_BEAM_LT" length="1" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgb6PqEemkxs57kDHJcg" label="SIREN" length="1" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgcKPqEemkxs57kDHJcg" label="CHECK_ENGINE" length="1" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgcaPqEemkxs57kDHJcg" label="THROTTLE" length="1" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgcqPqEemkxs57kDHJcg" label="ODOMETER_km_" length="7" precision="2" talendType="id_Float" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgc6PqEemkxs57kDHJcg" label="LONGITUDE___" length="9" precision="8" talendType="id_Float" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgdKPqEemkxs57kDHJcg" label="LATITUDE___" length="10" precision="8" talendType="id_Float" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgdaPqEemkxs57kDHJcg" label="IGNITION" length="1" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgdqPqEemkxs57kDHJcg" label="TIME_RUNNING" length="1" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgd6PqEemkxs57kDHJcg" label="TIME_STOP" length="1" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgeKPqEemkxs57kDHJcg" label="TIME_IDLE" length="1" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgeaPqEemkxs57kDHJcg" label="ACC_LONGIT_G_" length="6" precision="5" talendType="id_Float" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgeqPqEemkxs57kDHJcg" label="ACC_LATERAL_G_" length="7" precision="5" talendType="id_Double" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSge6PqEemkxs57kDHJcg" label="ACC_VERTICAL_G_" length="6" precision="5" talendType="id_Float" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgfKPqEemkxs57kDHJcg" label="FUEL_RATE_l_H_" length="3" precision="2" talendType="id_Float" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgfaPqEemkxs57kDHJcg" label="DRIVER_DOOR" length="1" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgfqPqEemkxs57kDHJcg" label="BACK_DOOR" length="1" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgf6PqEemkxs57kDHJcg" label="PARK_BRAKE" length="1" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSggKPqEemkxs57kDHJcg" label="SEAT_BELT" length="1" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSggaPqEemkxs57kDHJcg" label="AIR_BAG" length="1" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSggqPqEemkxs57kDHJcg" label="ECO_ACTIVE" length="1" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_6CSgg6PqEemkxs57kDHJcg" label="ESPAR_ACTIVE" length="1" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;"/>
+    </ownedElement>
+  </orgomg.cwm.resource.record:RecordFile>
+</xmi:XMI>

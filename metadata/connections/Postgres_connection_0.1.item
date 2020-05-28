@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmi:XMI xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:TalendMetadata="http://www.talend.org/metadata/connection/2010" xmlns:orgomg.cwm.resource.relational="http:///orgomg/cwm/resource/relational.ecore">
+  <TalendMetadata:DatabaseConnection xmi:id="_VZVacIMEEemBVok8de3zGQ" name="Postgres_connection" id="_WrxkoIMCEemBVok8de3zGQ" label="Postgres_connection" dataPackage="_kX36oI2qEemSTKSxIUuA-g" DatabaseType="PostgreSQL" DriverClass="org.postgresql.Driver" URL="jdbc:postgresql://localhost:5432/ambulance?" dbVersionString="V9_X" Port="5432" Username="postgres" Password="CNlsM2hQx/yKsFREJf9l+Q==" ServerName="localhost" DatasourceName="" FileFieldName="" SID="ambulance" SqlSynthax="" StringQuote="" NullChar="" DbmsId="postgres_id" ProductId="POSTGRESQL" AdditionalParams="" StandardSQL="true" SQLMode="false" UiSchema="public">
+    <taggedValue xmi:id="_VZX2sIMEEemBVok8de3zGQ" tag="Is Conn Need Reload" value="true"/>
+    <taggedValue xmi:id="_VaDMIIMEEemBVok8de3zGQ" tag="package filter" value=""/>
+    <taggedValue xmi:id="_VaTq0IMEEemBVok8de3zGQ" tag="Status" value=""/>
+    <taggedValue xmi:id="_VaTq0YMEEemBVok8de3zGQ" tag="Version" value="0.1"/>
+    <taggedValue xmi:id="_VaTq0oMEEemBVok8de3zGQ" tag="Purpose" value=""/>
+    <taggedValue xmi:id="_VaTq04MEEemBVok8de3zGQ" tag="Description" value=""/>
+    <taggedValue xmi:id="_VaTq1IMEEemBVok8de3zGQ" tag="Author" value=""/>
+    <taggedValue xmi:id="_VaTq1YMEEemBVok8de3zGQ" tag="otherParameter"/>
+    <taggedValue xmi:id="_BZChYIOzEemoN--sOX64Rw" tag="DB ProductName" value="PostgreSQL"/>
+    <taggedValue xmi:id="_BZChYYOzEemoN--sOX64Rw" tag="DB ProductVersion" value="11.3"/>
+    <taggedValue xmi:id="_BZChYoOzEemoN--sOX64Rw" tag="DB IdentifierQuoteString" value="&quot;"/>
+    <parameters xmi:id="_VZX2sYMEEemBVok8de3zGQ" key="CONN_PARA_KEY_USERNAME" value="postgres"/>
+    <parameters xmi:id="_WG9VcIMEEemBVok8de3zGQ" key="CONN_PARA_KEY_MAPRDB_TABLE_NS_MAPPING" value=""/>
+  </TalendMetadata:DatabaseConnection>
+  <orgomg.cwm.resource.relational:Catalog xmi:id="_kX36oI2qEemSTKSxIUuA-g" name="ambulance" dataManager="_VZVacIMEEemBVok8de3zGQ">
+    <ownedElement xsi:type="orgomg.cwm.resource.relational:Schema" xmi:id="_kX36oY2qEemSTKSxIUuA-g" name="public"/>
+  </orgomg.cwm.resource.relational:Catalog>
+</xmi:XMI>

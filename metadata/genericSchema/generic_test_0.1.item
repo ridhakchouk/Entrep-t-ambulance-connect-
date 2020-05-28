@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmi:XMI xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:TalendMetadata="http://www.talend.org/metadata/connection/2010">
+  <TalendMetadata:GenericSchemaConnection xmi:id="_hKa00JzMEempqLUZzRYKeA" comment="connectionComment" label="connectionLabel" dataPackage="_hKa00ZzMEempqLUZzRYKeA"/>
+  <TalendMetadata:GenericPackage xmi:id="_hKa00ZzMEempqLUZzRYKeA" dataManager="_hKa00JzMEempqLUZzRYKeA">
+    <ownedElement xsi:type="TalendMetadata:MetadataTable" xmi:id="_hKa00pzMEempqLUZzRYKeA" label="metadata">
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa005zMEempqLUZzRYKeA" name="id_vehicule" id="4173" label="id_vehicule" length="10" sourceType="SERIAL" talendType="id_Integer" key="true" nullable="false">
+        <initialValue xmi:id="_hKa01JzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa01ZzMEempqLUZzRYKeA" name="Date" id="4175" label="Date" length="10" sourceType="" talendType="id_Date" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa01pzMEempqLUZzRYKeA"/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa015zMEempqLUZzRYKeA" name="Time" id="4176" label="Time" length="8" sourceType="" talendType="id_String" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa02JzMEempqLUZzRYKeA"/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa02ZzMEempqLUZzRYKeA" name="RPM" id="4177" label="RPM" length="1" sourceType="" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa02pzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa025zMEempqLUZzRYKeA" name="SPEED_km_h_" id="4178" label="SPEED_km_h_" length="3" precision="2" sourceType="" talendType="id_Float" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa03JzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa03ZzMEempqLUZzRYKeA" name="RIGHT_FLASH" id="4179" label="RIGHT_FLASH" length="1" sourceType="" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa03pzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa035zMEempqLUZzRYKeA" name="LEFT_FLASH" id="4180" label="LEFT_FLASH" length="1" sourceType="" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa04JzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa04ZzMEempqLUZzRYKeA" name="BRAKE_PEDAL" id="4181" label="BRAKE_PEDAL" length="1" sourceType="" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa04pzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa045zMEempqLUZzRYKeA" name="PRIMARY_LT" id="4182" label="PRIMARY_LT" length="1" sourceType="" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa05JzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa05ZzMEempqLUZzRYKeA" name="WIG_WAG_LT" id="4184" label="WIG_WAG_LT" length="1" sourceType="" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa05pzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa055zMEempqLUZzRYKeA" name="REVERSE_GEAR" id="4185" label="REVERSE_GEAR" length="1" sourceType="" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa06JzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa06ZzMEempqLUZzRYKeA" name="CHASSIS_VOLT_V_" id="4186" label="CHASSIS_VOLT_V_" length="5" precision="3" sourceType="" talendType="id_Float" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa06pzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa065zMEempqLUZzRYKeA" name="CONVERS_VOLT_V_" id="4187" label="CONVERS_VOLT_V_" length="5" precision="3" sourceType="" talendType="id_Float" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa07JzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa07ZzMEempqLUZzRYKeA" name="RADIO_VOLT_V_" id="4188" label="RADIO_VOLT_V_" length="4" precision="3" sourceType="" talendType="id_Float" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa07pzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa075zMEempqLUZzRYKeA" name="PARKING_LT" id="4189" label="PARKING_LT" length="1" sourceType="" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa08JzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa08ZzMEempqLUZzRYKeA" name="HIGH_BEAM_LT" id="4190" label="HIGH_BEAM_LT" length="1" sourceType="" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa08pzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa085zMEempqLUZzRYKeA" name="SIREN" id="4191" label="SIREN" length="1" sourceType="" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa09JzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa09ZzMEempqLUZzRYKeA" name="CHECK_ENGINE" id="4192" label="CHECK_ENGINE" length="1" sourceType="" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa09pzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa095zMEempqLUZzRYKeA" name="THROTTLE" id="4193" label="THROTTLE" length="1" sourceType="" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa0-JzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa0-ZzMEempqLUZzRYKeA" name="ODOMETER_km_" id="4194" label="ODOMETER_km_" length="7" precision="2" sourceType="" talendType="id_Float" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa0-pzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa0-5zMEempqLUZzRYKeA" name="LONGITUDE___" id="4195" label="LONGITUDE___" length="9" precision="8" sourceType="" talendType="id_Float" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa0_JzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa0_ZzMEempqLUZzRYKeA" name="LATITUDE___" id="4196" label="LATITUDE___" length="10" precision="8" sourceType="" talendType="id_Float" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa0_pzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa0_5zMEempqLUZzRYKeA" name="IGNITION" id="4197" label="IGNITION" length="1" sourceType="" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa1AJzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa1AZzMEempqLUZzRYKeA" name="TIME_RUNNING" id="4198" label="TIME_RUNNING" length="1" sourceType="" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa1ApzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa1A5zMEempqLUZzRYKeA" name="TIME_STOP" id="4199" label="TIME_STOP" length="1" sourceType="" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa1BJzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa1BZzMEempqLUZzRYKeA" name="TIME_IDLE" id="4200" label="TIME_IDLE" length="1" sourceType="" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa1BpzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa1B5zMEempqLUZzRYKeA" name="ACC_LONGIT_G_" id="4201" label="ACC_LONGIT_G_" length="6" precision="5" sourceType="" talendType="id_Float" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa1CJzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa1CZzMEempqLUZzRYKeA" name="ACC_LATERAL_G_" id="4202" label="ACC_LATERAL_G_" length="7" precision="5" sourceType="" talendType="id_Double" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa1CpzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa1C5zMEempqLUZzRYKeA" name="ACC_VERTICAL_G_" id="4203" label="ACC_VERTICAL_G_" length="6" precision="5" sourceType="" talendType="id_Float" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa1DJzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa1DZzMEempqLUZzRYKeA" name="FUEL_RATE_l_H_" id="4204" label="FUEL_RATE_l_H_" length="3" precision="2" sourceType="" talendType="id_Float" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa1DpzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa1D5zMEempqLUZzRYKeA" name="DRIVER_DOOR" id="4205" label="DRIVER_DOOR" length="1" sourceType="" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa1EJzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa1EZzMEempqLUZzRYKeA" name="BACK_DOOR" id="4206" label="BACK_DOOR" length="1" sourceType="" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa1EpzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa1E5zMEempqLUZzRYKeA" name="PARK_BRAKE" id="4207" label="PARK_BRAKE" length="1" sourceType="" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa1FJzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa1FZzMEempqLUZzRYKeA" name="SEAT_BELT" id="4208" label="SEAT_BELT" length="1" sourceType="" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa1FpzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa1F5zMEempqLUZzRYKeA" name="AIR_BAG" id="4209" label="AIR_BAG" length="1" sourceType="" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa1GJzMEempqLUZzRYKeA" body=""/>
+      </feature>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_hKa1GZzMEempqLUZzRYKeA" name="ECO_ACTIVE" id="4210" label="ECO_ACTIVE" length="1" sourceType="" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;">
+        <initialValue xmi:id="_hKa1GpzMEempqLUZzRYKeA" body=""/>
+      </feature>
+    </ownedElement>
+  </TalendMetadata:GenericPackage>
+</xmi:XMI>
